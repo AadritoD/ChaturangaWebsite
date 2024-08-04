@@ -1,13 +1,18 @@
+// Website/frontend/src/App.js
+
 import React, { useState } from "react"
 import ReactDOM from "react-dom"
 import Chess from "chess.js"
 import Chessground from "react-chessground"
 import "react-chessground/dist/styles/chessground.css"
 import { Col, Modal } from "antd"
+import axios from 'axios';
 import queen from "./images/wQ.svg"
 import rook from "./images/wR.svg"
 import bishop from "./images/wB.svg"
 import knight from "./images/wN.svg"
+
+import "./images/pieces.css"
 
 const Demo = () => {
   const [chess, setChess] = useState(new Chess())
@@ -18,7 +23,7 @@ const Demo = () => {
 
   const onMove = (from, to) => {
     const moves = chess.moves({ verbose: true })
-    for (let i = 0, len = moves.length; i < len; i++) { /* eslint-disable-line */
+    for (let i = 0, len = moves.length; i < len; i++) {
       if (moves[i].flags.indexOf("p") !== -1 && moves[i].from === from) {
         setPendingMove([from, to])
         setSelectVisible(true)
@@ -28,17 +33,22 @@ const Demo = () => {
     if (chess.move({ from, to, promotion: "x" })) {
       setFen(chess.fen())
       setLastMove([from, to])
-      setTimeout(randomMove, 500)
+      setTimeout(() => randomMove(chess.fen()), 500)
     }
   }
 
-  const randomMove = () => {
-    const moves = chess.moves({ verbose: true })
-    const move = moves[Math.floor(Math.random() * moves.length)]
-    if (moves.length > 0) {
-      chess.move(move.san)
-      setFen(chess.fen())
-      setLastMove([move.from, move.to])
+  const randomMove = async (currentFen) => {
+    try {
+      const response = await axios.get('http://localhost:3001/random-move', {
+        params: { fen: currentFen }
+      });
+      const newFen = response.data.fen;
+      const move = response.data.move;
+      setChess(new Chess(newFen));
+      setFen(newFen);
+      setLastMove([move.from, move.to]);
+    } catch (error) {
+      console.error('Error fetching random move:', error);
     }
   }
 
@@ -49,7 +59,7 @@ const Demo = () => {
     setFen(chess.fen())
     setLastMove([from, to])
     setSelectVisible(false)
-    setTimeout(randomMove, 500)
+    setTimeout(() => randomMove(chess.fen()), 500)
   }
 
   const turnColor = () => {
